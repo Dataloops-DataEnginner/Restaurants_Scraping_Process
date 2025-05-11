@@ -20,7 +20,7 @@ from selenium.webdriver import Firefox
 nest_asyncio.apply()
 
 
-class TalabatScraper:
+class RestaurantScraper:
     def __init__(self):
         self.BASE_URL = "https://www.talabat.com"
         self.MAX_RETRIES = 4
@@ -2277,7 +2277,7 @@ class TalabatScraper:
 
 # async def main():
 #     """Main execution function."""
-#     scraper = TalabatScraper()
+#     scraper = RestaurantScraper()
 #
 #     # Example area URL - modify this to scrape different areas
 #     area_url = "https://www.talabat.com/kuwait/restaurants/59/dhaher"
