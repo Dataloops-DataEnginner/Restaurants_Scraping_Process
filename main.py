@@ -12,7 +12,7 @@ from openpyxl import Workbook, load_workbook
 from openpyxl.utils.dataframe import dataframe_to_rows
 from openpyxl.utils import get_column_letter
 from playwright.async_api import async_playwright
-from talabat_main_scraper import TalabatScraper
+from scraper import RestaurantScraper
 from drive import SaveOnDrive
 from time import sleep
 from datetime import datetime
@@ -29,7 +29,7 @@ class MainScraper:
     SCRAPED_PROGRESS_FILE = "scraped_progress.json"
 
     def __init__(self):
-        self.talabat_scraper = TalabatScraper()
+        self.talabat_scraper = RestaurantScraper()
         self.output_dir = "output"
         credentials_json = os.environ.get('TALABAT_GCLOUD_KEY_JSON')
         self.drive_uploader = SaveOnDrive(credentials_json=credentials_json)
@@ -895,7 +895,7 @@ if __name__ == "__main__":
 # from openpyxl.utils.dataframe import dataframe_to_rows
 # from openpyxl.utils import get_column_letter
 # from playwright.async_api import async_playwright
-# from talabat_main_scraper import TalabatScraper
+# from scraper import RestaurantScraper
 # from drive import SaveOnDrive
 # from time import sleep
 # from datetime import datetime
@@ -912,7 +912,7 @@ if __name__ == "__main__":
 #     SCRAPED_PROGRESS_FILE = "scraped_progress.json"
 
 #     def __init__(self):
-#         self.talabat_scraper = TalabatScraper()
+#         self.talabat_scraper = RestaurantScraper()
 #         self.output_dir = "output"
 #         credentials_json = os.environ.get('TALABAT_GCLOUD_KEY_JSON')
 #         self.drive_uploader = SaveOnDrive(credentials_json=credentials_json)
@@ -1794,7 +1794,7 @@ if __name__ == "__main__":
 # from openpyxl.utils.dataframe import dataframe_to_rows
 # from openpyxl.utils import get_column_letter
 # from playwright.async_api import async_playwright
-# from talabat_main_scraper import TalabatScraper
+# from scraper import RestaurantScraper
 # from drive import SaveOnDrive
 # from time import sleep
 # from datetime import datetime
@@ -1811,7 +1811,7 @@ if __name__ == "__main__":
 #     SCRAPED_PROGRESS_FILE = "scraped_progress.json"
 
 #     def __init__(self):
-#         self.talabat_scraper = TalabatScraper()
+#         self.talabat_scraper = RestaurantScraper()
 #         self.output_dir = "output"
 #         credentials_json = os.environ.get('TALABAT_GCLOUD_KEY_JSON')
 #         self.drive_uploader = SaveOnDrive(credentials_json=credentials_json)
