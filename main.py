@@ -13,7 +13,7 @@ from openpyxl.utils.dataframe import dataframe_to_rows
 from openpyxl.utils import get_column_letter
 from playwright.async_api import async_playwright
 from talabat_main_scraper import TalabatScraper
-from SavingOnDrive import SavingOnDrive
+from drive import SaveOnDrive
 from time import sleep
 from datetime import datetime
 import logging
@@ -32,7 +32,7 @@ class MainScraper:
         self.talabat_scraper = TalabatScraper()
         self.output_dir = "output"
         credentials_json = os.environ.get('TALABAT_GCLOUD_KEY_JSON')
-        self.drive_uploader = SavingOnDrive(credentials_json=credentials_json)
+        self.drive_uploader = SaveOnDrive(credentials_json=credentials_json)
         
         os.makedirs(self.output_dir, exist_ok=True)
         
@@ -725,7 +725,7 @@ class MainScraper:
             if not credentials_json:
                 print("Error: TALABAT_GCLOUD_KEY_JSON environment variable is empty or not set!")
                 return False
-            self.drive_uploader = SavingOnDrive(credentials_json=credentials_json)
+            self.drive_uploader = SaveOnDrive(credentials_json=credentials_json)
             if not self.drive_uploader.authenticate():
                 print("Failed to authenticate with Google Drive. Check TALABAT_GCLOUD_KEY_JSON validity.")
                 return False
@@ -896,7 +896,7 @@ if __name__ == "__main__":
 # from openpyxl.utils import get_column_letter
 # from playwright.async_api import async_playwright
 # from talabat_main_scraper import TalabatScraper
-# from SavingOnDrive import SavingOnDrive
+# from drive import SaveOnDrive
 # from time import sleep
 # from datetime import datetime
 # import logging
@@ -915,7 +915,7 @@ if __name__ == "__main__":
 #         self.talabat_scraper = TalabatScraper()
 #         self.output_dir = "output"
 #         credentials_json = os.environ.get('TALABAT_GCLOUD_KEY_JSON')
-#         self.drive_uploader = SavingOnDrive(credentials_json=credentials_json)
+#         self.drive_uploader = SaveOnDrive(credentials_json=credentials_json)
         
 #         os.makedirs(self.output_dir, exist_ok=True)
         
@@ -1624,7 +1624,7 @@ if __name__ == "__main__":
 #             if not credentials_json:
 #                 print("Error: TALABAT_GCLOUD_KEY_JSON environment variable is empty or not set!")
 #                 return False
-#             self.drive_uploader = SavingOnDrive(credentials_json=credentials_json)
+#             self.drive_uploader = SaveOnDrive(credentials_json=credentials_json)
 #             if not self.drive_uploader.authenticate():
 #                 print("Failed to authenticate with Google Drive. Check TALABAT_GCLOUD_KEY_JSON validity.")
 #                 return False
@@ -1795,7 +1795,7 @@ if __name__ == "__main__":
 # from openpyxl.utils import get_column_letter
 # from playwright.async_api import async_playwright
 # from talabat_main_scraper import TalabatScraper
-# from SavingOnDrive import SavingOnDrive
+# from drive import SaveOnDrive
 # from time import sleep
 # from datetime import datetime
 # import logging
@@ -1814,7 +1814,7 @@ if __name__ == "__main__":
 #         self.talabat_scraper = TalabatScraper()
 #         self.output_dir = "output"
 #         credentials_json = os.environ.get('TALABAT_GCLOUD_KEY_JSON')
-#         self.drive_uploader = SavingOnDrive(credentials_json=credentials_json)
+#         self.drive_uploader = SaveOnDrive(credentials_json=credentials_json)
         
 #         os.makedirs(self.output_dir, exist_ok=True)
         
@@ -2660,7 +2660,7 @@ if __name__ == "__main__":
 #             if not credentials_json:
 #                 print("Error: TALABAT_GCLOUD_KEY_JSON environment variable is empty or not set!")
 #                 return False
-#             self.drive_uploader = SavingOnDrive(credentials_json=credentials_json)
+#             self.drive_uploader = SaveOnDrive(credentials_json=credentials_json)
 #             if not self.drive_uploader.authenticate():
 #                 print("Failed to authenticate with Google Drive. Check TALABAT_GCLOUD_KEY_JSON validity.")
 #                 return False
