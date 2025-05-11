@@ -47,7 +47,7 @@ jobs:
           path: current_progress.json
           key: restaurant-scraper-progress-${{ github.run_id }}
           restore-keys: |
-            talabat-scraper-progress-
+            restaurant-scraper-progress-
 
       - name: Run Talabat scraper
         run: python main.py
