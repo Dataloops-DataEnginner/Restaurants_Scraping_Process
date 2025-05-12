@@ -5,6 +5,10 @@ on:
     - cron: "0 */6 * * *"  # Runs every 6 hours
   workflow_dispatch:     # Allows manual triggering
 
+permissions:
+  contents: write  # Grant write access to repository contents
+  actions: read    # Allow reading workflow-related data
+
 concurrency:
   group: restaurant-scraper-${{ github.ref }}
   cancel-in-progress: true
