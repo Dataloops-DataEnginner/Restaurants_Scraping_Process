@@ -944,11 +944,11 @@ class RestaurantScraper:
                             (By.XPATH, "//button[contains(text(), 'Read More')]"),
                             (By.XPATH, "//span[contains(text(), 'Read More')]/parent::button"),
                             (By.CSS_SELECTOR, ".text-amber.read-more-button"),
-                            (By.XPATH, "//button[contains(@class, 'read-more')]"),
-                            (By.CSS_SELECTOR, "button.btn.text-amber"),  # Broader button class
+                            (By.XPATH, "//button[contains(@class, 'read-more') and not(contains(@class, 'disabled'))]"),
+                            (By.CSS_SELECTOR, "button.btn.text-amber"),
                             (By.XPATH, "//button[contains(@class, 'btn') and contains(., 'Read More')]"),
-                            (By.CSS_SELECTOR, "button[data-testid*='read-more']"),  # Partial data-testid match
-                            (By.XPATH, "//button[normalize-space(text())='Read More']"),  # Exact text match
+                            (By.CSS_SELECTOR, "button[data-testid*='read-more']"),
+                            (By.XPATH, "//button[normalize-space(text())='Read More']"),
                         ]
     
                         button = None
@@ -1055,8 +1055,7 @@ class RestaurantScraper:
                         driver.quit()
                     except Exception as e:
                         print(f"Error closing driver: {e}")
-    
-    ### EXPANDING CLOSED CATEGORIES ###
+
     def expand_menu_categories(self, driver):
         try:
             print("Expanding menu categories...")
@@ -1068,7 +1067,7 @@ class RestaurantScraper:
                     XPathResult.ORDERED_NODE_SNAPSHOT_TYPE,
                     null
                 );
-
+    
                 const clickedCount = [];
                 for (let i = 0; i < expandButtons.snapshotLength; i++) {
                     const button = expandButtons.snapshotItem(i);
@@ -1086,6 +1085,37 @@ class RestaurantScraper:
         except Exception as e:
             print(f"Error expanding menu categories: {e}")
             return False
+    
+    ### EXPANDING CLOSED CATEGORIES ###
+    # def expand_menu_categories(self, driver):
+    #     try:
+    #         print("Expanding menu categories...")
+    #         script = """
+    #             const expandButtons = document.evaluate(
+    #                 "//svg[contains(@class, 'fa-chevron-down')]",
+    #                 document,
+    #                 null,
+    #                 XPathResult.ORDERED_NODE_SNAPSHOT_TYPE,
+    #                 null
+    #             );
+
+    #             const clickedCount = [];
+    #             for (let i = 0; i < expandButtons.snapshotLength; i++) {
+    #                 const button = expandButtons.snapshotItem(i);
+    #                 if (button && button.getAttribute('data-icon') === 'chevron-down') {
+    #                     button.closest('div').click();
+    #                     clickedCount.push(i);
+    #                 }
+    #             }
+    #             return clickedCount.length;
+    #         """
+    #         clicked_count = driver.execute_script(script)
+    #         print(f"Expanded {clicked_count} menu categories")
+    #         time.sleep(2)
+    #         return True
+    #     except Exception as e:
+    #         print(f"Error expanding menu categories: {e}")
+    #         return False
 
     ### GETTING PRICE NORMALLY ###
     async def get_price_info_with_retry(self, item, max_retries=3):
