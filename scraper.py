@@ -746,346 +746,6 @@ class RestaurantScraper:
     #             except Exception as e:
     #                 print(f"Error closing driver: {e}")
 
-    def get_reviews_data(self, reviews_url: str) -> Optional[Dict]:
-        """
-        Scrapes review data with enhanced extraction - collects up to 100 customer reviews.
-        Will continue clicking "Read More" until either all reviews are loaded or 100 reviews are collected.
-        """
-        driver = None
-        try:
-            # Set up Firefox options
-            firefox_options = FirefoxOptions()
-            firefox_options.add_argument('--headless')
-            firefox_options.add_argument('--window-size=1920,1080')
-            firefox_options.add_argument('--disable-gpu')
-    
-            # Initialize Firefox WebDriver
-            driver = webdriver.Firefox(options=firefox_options)
-            driver.get(reviews_url)
-    
-            # Set explicit wait
-            wait = WebDriverWait(driver, 15)
-    
-            # Wait for page to load
-            print(f"Loading reviews page: {reviews_url}")
-            time.sleep(5)
-    
-            try:
-                # Get basic rating information
-                rating_value = driver.find_element(
-                    By.CSS_SELECTOR, "[data-testid='brand-rating-number']"
-                ).text
-                print(f"Found rating: {rating_value}")
-    
-                try:
-                    ratings_number = driver.find_element(
-                        By.CSS_SELECTOR, "[data-testid='brand-total-ratings']"
-                    ).text
-                except:
-                    ratings_number = "0"
-                    print("Could not find ratings number")
-    
-                try:
-                    reviews_number = driver.find_element(
-                        By.CSS_SELECTOR, "[data-testid='brand-total-reviews']"
-                    ).text
-                    reviews_count_text = reviews_number.strip()
-                    total_reviews = int(''.join(filter(str.isdigit, reviews_count_text)))
-                    print(f"Total reviews available: {total_reviews}")
-                except:
-                    reviews_number = "0"
-                    total_reviews = 0
-                    print("Could not find reviews number")
-    
-                # Extract General Review Paragraphs
-                review_paragraphs = []
-                try:
-                    markdown_div = driver.find_element(By.CSS_SELECTOR, ".markdown-rich-text-block")
-                    if markdown_div:
-                        paragraphs = markdown_div.find_elements(By.TAG_NAME, "p")
-                        for p in paragraphs:
-                            if p.text.strip():
-                                review_paragraphs.append(p.text.strip())
-                        print(f"Found {len(review_paragraphs)} general review paragraphs")
-                except Exception as e:
-                    print(f"Error extracting general review: {e}")
-                    try:
-                        paragraphs = driver.find_elements(By.CSS_SELECTOR,
-                                                          ".brand-reviews p, .restaurant-description p")
-                        for p in paragraphs[:3]:
-                            if p.text.strip():
-                                review_paragraphs.append(p.text.strip())
-                        print(f"Found {len(review_paragraphs)} general review paragraphs (fallback)")
-                    except:
-                        pass
-    
-                # Get specific reviews
-                specific_reviews = {}
-                specific_review_items = driver.find_elements(
-                    By.CSS_SELECTOR, "[data-testid$='-rate']"
-                )
-                for item in specific_review_items:
-                    try:
-                        rating_text = item.text.strip().split('\n')
-                        if len(rating_text) >= 2:
-                            category = rating_text[-1]
-                            rating = rating_text[0]
-                            specific_reviews[category] = rating
-                    except Exception as e:
-                        print(f"Error extracting specific review: {e}")
-                        continue
-    
-                # Click "Read More" button until we have 100 reviews or no more to load
-                MAX_REVIEWS = 100
-                MAX_CLICK_ATTEMPTS = 50
-                loaded_review_ids = set()
-                actual_reviews = []
-                continue_clicking = True
-                clicks_completed = 0
-                wait = WebDriverWait(driver, 10)
-    
-                # Scroll to ensure initial reviews are loaded
-                driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
-                time.sleep(2)
-    
-                while continue_clicking and clicks_completed < MAX_CLICK_ATTEMPTS:
-                    try:
-                        # Extract reviews that are currently loaded
-                        current_reviews = driver.find_elements(
-                            By.CSS_SELECTOR, "[data-testid='reviews-item-component']"
-                        )
-                        if not current_reviews:
-                            current_reviews = driver.find_elements(
-                                By.CSS_SELECTOR, ".review-item, .review-container"
-                            )
-    
-                        # Process newly loaded reviews
-                        new_reviews_found = 0
-                        for review in current_reviews:
-                            try:
-                                reviewer_name = "Unknown"
-                                review_date = "Unknown date"
-                                review_rating = "Unknown"
-                                review_comment = "No comment"
-    
-                                try:
-                                    reviewer_name = review.find_element(
-                                        By.CSS_SELECTOR, "[data-testid='customer-name']"
-                                    ).text.strip()
-                                except:
-                                    try:
-                                        reviewer_name = review.find_element(
-                                            By.CSS_SELECTOR, ".dark-gray.f-14.mt-1"
-                                        ).text.strip()
-                                    except:
-                                        pass
-    
-                                try:
-                                    review_date = review.find_element(
-                                        By.CSS_SELECTOR, "div.dark-gray.ml-auto"
-                                    ).text.strip()
-                                except:
-                                    pass
-    
-                                try:
-                                    rating_div = review.find_element(
-                                        By.CSS_SELECTOR, "[data-testid='restaurant-rating-comp'] div.undefined"
-                                    )
-                                    review_rating = rating_div.text.strip()
-                                except:
-                                    try:
-                                        rating_div = review.find_element(
-                                            By.CSS_SELECTOR, ".rating-word div"
-                                        )
-                                        review_rating = rating_div.text.strip()
-                                    except:
-                                        pass
-    
-                                try:
-                                    review_comment = review.find_element(
-                                        By.CSS_SELECTOR, "[data-testid='customer-review']"
-                                    ).text.strip()
-                                except:
-                                    try:
-                                        review_comment = review.find_element(
-                                            By.CSS_SELECTOR, "p.pt-2"
-                                        ).text.strip()
-                                    except:
-                                        pass
-    
-                                review_id = f"{reviewer_name}_{review_date}_{review_comment[:20]}"
-                                if review_id not in loaded_review_ids:
-                                    loaded_review_ids.add(review_id)
-                                    new_reviews_found += 1
-                                    actual_reviews.append({
-                                        "reviewer_name": reviewer_name,
-                                        "review_date": review_date,
-                                        "review_rating": review_rating,
-                                        "review_comment": review_comment
-                                    })
-                            except Exception as e:
-                                print(f"Error processing a review: {e}")
-                                continue
-    
-                        print(f"Current review count: {len(actual_reviews)}/{MAX_REVIEWS}")
-    
-                        # Stop if we've hit our target
-                        if len(actual_reviews) >= MAX_REVIEWS:
-                            print(f"Reached target of {MAX_REVIEWS} reviews")
-                            continue_clicking = False
-                            break
-    
-                        # Try to find the Read More button
-                        print(f"\nAttempting to click Read More - {clicks_completed + 1}")
-    
-                        # Extended selectors for robustness
-                        button_selectors = [
-                            (By.CSS_SELECTOR, "button[data-testid='read-more-button']"),
-                            (By.XPATH, "//button[contains(text(), 'Read More')]"),
-                            (By.XPATH, "//span[contains(text(), 'Read More')]/parent::button"),
-                            (By.CSS_SELECTOR, ".text-amber.read-more-button"),
-                            (By.XPATH, "//button[contains(@class, 'read-more') and not(contains(@class, 'disabled'))]"),
-                            (By.CSS_SELECTOR, "button.btn.text-amber"),
-                            (By.XPATH, "//button[contains(@class, 'btn') and contains(., 'Read More')]"),
-                            (By.CSS_SELECTOR, "button[data-testid*='read-more']"),
-                            (By.XPATH, "//button[normalize-space(text())='Read More']"),
-                        ]
-    
-                        button = None
-                        for by, selector in button_selectors:
-                            try:
-                                elements = driver.find_elements(by, selector)
-                                for element in elements:
-                                    if element.is_displayed() and element.is_enabled():
-                                        button = element
-                                        print(f"Found Read More button with selector: {selector}")
-                                        break
-                                if button:
-                                    break
-                            except:
-                                continue
-    
-                        if not button:
-                            print("No more Read More buttons found, checking page source for debugging...")
-                            # Save page source for debugging
-                            with open(f"debug_page_source_{clicks_completed}.html", "w", encoding="utf-8") as f:
-                                f.write(driver.page_source)
-                            continue_clicking = False
-                            break
-    
-                        # Scroll the button into view
-                        driver.execute_script("arguments[0].scrollIntoView({behavior: 'smooth', block: 'center'});", button)
-                        time.sleep(1)
-    
-                        # Try to click using multiple methods
-                        click_successful = False
-                        try:
-                            driver.execute_script("arguments[0].click();", button)
-                            click_successful = True
-                        except:
-                            try:
-                                button.click()
-                                click_successful = True
-                            except:
-                                try:
-                                    from selenium.webdriver.common.action_chains import ActionChains
-                                    ActionChains(driver).move_to_element(button).click().perform()
-                                    click_successful = True
-                                except:
-                                    print("Failed to click button using all methods")
-    
-                        if click_successful:
-                            clicks_completed += 1
-                            print(f"Successfully clicked Read More ({clicks_completed})")
-    
-                            # Wait for new reviews to load
-                            try:
-                                wait.until(EC.presence_of_element_located(
-                                    (By.CSS_SELECTOR, "[data-testid='reviews-item-component'], .review-item")
-                                ))
-                                print("New review elements detected")
-                            except:
-                                print("No new review elements detected, continuing...")
-    
-                            # Scroll to the bottom to ensure all content is loaded
-                            driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
-                            time.sleep(3)  # Increased wait time for content to load
-                        else:
-                            print("Could not click the button, ending extraction")
-                            continue_clicking = False
-    
-                    except Exception as e:
-                        print(f"Error during click attempt {clicks_completed + 1}: {e}")
-                        clicks_completed += 1
-                        if clicks_completed >= 10 and len(actual_reviews) == 0:
-                            continue_clicking = False
-                            break
-                        time.sleep(1)
-    
-                print(f"\nCompleted {clicks_completed} Read More clicks")
-                print(f"Successfully extracted {len(actual_reviews)} individual reviews")
-    
-                # Clean and format the data
-                ratings_count = ''.join(filter(str.isdigit, ratings_number)) if ratings_number else "0"
-                reviews_count = ''.join(filter(str.isdigit, reviews_number)) if reviews_number else "0"
-    
-                result = {
-                    "Rating_value": rating_value,
-                    "Ratings_count": ratings_count,
-                    "Reviews_count": reviews_count,
-                    "General_review": review_paragraphs,
-                    "Specific_reviews": specific_reviews,
-                    "Customer_reviews": actual_reviews
-                }
-    
-                return result
-    
-            except Exception as e:
-                print(f"Error in review extraction: {e}")
-                import traceback
-                traceback.print_exc()
-                return {
-                    "Rating_value": "N/A",
-                    "Error": str(e)
-                }
-    
-            finally:
-                if driver:
-                    try:
-                        driver.quit()
-                    except Exception as e:
-                        print(f"Error closing driver: {e}")
-
-    def expand_menu_categories(self, driver):
-        try:
-            print("Expanding menu categories...")
-            script = """
-                const expandButtons = document.evaluate(
-                    "//svg[contains(@class, 'fa-chevron-down')]",
-                    document,
-                    null,
-                    XPathResult.ORDERED_NODE_SNAPSHOT_TYPE,
-                    null
-                );
-    
-                const clickedCount = [];
-                for (let i = 0; i < expandButtons.snapshotLength; i++) {
-                    const button = expandButtons.snapshotItem(i);
-                    if (button && button.getAttribute('data-icon') === 'chevron-down') {
-                        button.closest('div').click();
-                        clickedCount.push(i);
-                    }
-                }
-                return clickedCount.length;
-            """
-            clicked_count = driver.execute_script(script)
-            print(f"Expanded {clicked_count} menu categories")
-            time.sleep(2)
-            return True
-        except Exception as e:
-            print(f"Error expanding menu categories: {e}")
-            return False
-    
     ### EXPANDING CLOSED CATEGORIES ###
     # def expand_menu_categories(self, driver):
     #     try:
@@ -1116,6 +776,349 @@ class RestaurantScraper:
     #     except Exception as e:
     #         print(f"Error expanding menu categories: {e}")
     #         return False
+
+    def get_reviews_data(self, reviews_url: str) -> Optional[Dict]:
+        """
+        Scrapes review data with enhanced extraction - collects up to 100 customer reviews.
+        Will continue clicking "Read More" until either all reviews are loaded or 100 reviews are collected.
+        """
+        driver = None
+        try:
+            # Set up Firefox options
+            firefox_options = FirefoxOptions()
+            firefox_options.add_argument('--headless')
+            firefox_options.add_argument('--window-size=1920,1080')
+            firefox_options.add_argument('--disable-gpu')
+    
+            # Initialize Firefox WebDriver
+            driver = webdriver.Firefox(options=firefox_options)
+            driver.get(reviews_url)
+    
+            # Set explicit wait
+            wait = WebDriverWait(driver, 15)
+    
+            # Wait for page to load
+            print(f"Loading reviews page: {reviews_url}")
+            time.sleep(5)
+    
+            # Get basic rating information
+            rating_value = "N/A"
+            try:
+                rating_value = driver.find_element(
+                    By.CSS_SELECTOR, "[data-testid='brand-rating-number']"
+                ).text
+                print(f"Found rating: {rating_value}")
+            except Exception as e:
+                print(f"Could not find rating: {e}")
+    
+            try:
+                ratings_number = driver.find_element(
+                    By.CSS_SELECTOR, "[data-testid='brand-total-ratings']"
+                ).text
+            except:
+                ratings_number = "0"
+                print("Could not find ratings number")
+    
+            try:
+                reviews_number = driver.find_element(
+                    By.CSS_SELECTOR, "[data-testid='brand-total-reviews']"
+                ).text
+                reviews_count_text = reviews_number.strip()
+                total_reviews = int(''.join(filter(str.isdigit, reviews_count_text)))
+                print(f"Total reviews available: {total_reviews}")
+            except:
+                reviews_number = "0"
+                total_reviews = 0
+                print("Could not find reviews number")
+    
+            # Extract General Review Paragraphs
+            review_paragraphs = []
+            try:
+                markdown_div = driver.find_element(By.CSS_SELECTOR, ".markdown-rich-text-block")
+                if markdown_div:
+                    paragraphs = markdown_div.find_elements(By.TAG_NAME, "p")
+                    for p in paragraphs:
+                        if p.text.strip():
+                            review_paragraphs.append(p.text.strip())
+                    print(f"Found {len(review_paragraphs)} general review paragraphs")
+            except Exception as e:
+                print(f"Error extracting general review: {e}")
+                try:
+                    paragraphs = driver.find_elements(By.CSS_SELECTOR,
+                                                      ".brand-reviews p, .restaurant-description p")
+                    for p in paragraphs[:3]:
+                        if p.text.strip():
+                            review_paragraphs.append(p.text.strip())
+                    print(f"Found {len(review_paragraphs)} general review paragraphs (fallback)")
+                except:
+                    pass
+    
+            # Get specific reviews
+            specific_reviews = {}
+            specific_review_items = driver.find_elements(
+                By.CSS_SELECTOR, "[data-testid$='-rate']"
+            )
+            for item in specific_review_items:
+                try:
+                    rating_text = item.text.strip().split('\n')
+                    if len(rating_text) >= 2:
+                        category = rating_text[-1]
+                        rating = rating_text[0]
+                        specific_reviews[category] = rating
+                except Exception as e:
+                    print(f"Error extracting specific review: {e}")
+                    continue
+    
+            # Click "Read More" button until we have 100 reviews or no more to load
+            MAX_REVIEWS = 100
+            MAX_CLICK_ATTEMPTS = 50
+            loaded_review_ids = set()
+            actual_reviews = []
+            continue_clicking = True
+            clicks_completed = 0
+            wait = WebDriverWait(driver, 10)
+    
+            # Scroll to ensure initial reviews are loaded
+            driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+            time.sleep(2)
+    
+            while continue_clicking and clicks_completed < MAX_CLICK_ATTEMPTS:
+                try:
+                    # Extract reviews that are currently loaded
+                    current_reviews = driver.find_elements(
+                        By.CSS_SELECTOR, "[data-testid='reviews-item-component']"
+                    )
+                    if not current_reviews:
+                        current_reviews = driver.find_elements(
+                            By.CSS_SELECTOR, ".review-item, .review-container"
+                        )
+    
+                    # Process newly loaded reviews
+                    new_reviews_found = 0
+                    for review in current_reviews:
+                        try:
+                            reviewer_name = "Unknown"
+                            review_date = "Unknown date"
+                            review_rating = "Unknown"
+                            review_comment = "No comment"
+    
+                            try:
+                                reviewer_name = review.find_element(
+                                    By.CSS_SELECTOR, "[data-testid='customer-name']"
+                                ).text.strip()
+                            except:
+                                try:
+                                    reviewer_name = review.find_element(
+                                        By.CSS_SELECTOR, ".dark-gray.f-14.mt-1"
+                                    ).text.strip()
+                                except:
+                                    pass
+    
+                            try:
+                                review_date = review.find_element(
+                                    By.CSS_SELECTOR, "div.dark-gray.ml-auto"
+                                ).text.strip()
+                            except:
+                                pass
+    
+                            try:
+                                rating_div = review.find_element(
+                                    By.CSS_SELECTOR, "[data-testid='restaurant-rating-comp'] div.undefined"
+                                )
+                                review_rating = rating_div.text.strip()
+                            except:
+                                try:
+                                    rating_div = review.find_element(
+                                        By.CSS_SELECTOR, ".rating-word div"
+                                    )
+                                    review_rating = rating_div.text.strip()
+                                except:
+                                    pass
+    
+                            try:
+                                review_comment = review.find_element(
+                                    By.CSS_SELECTOR, "[data-testid='customer-review']"
+                                ).text.strip()
+                            except:
+                                try:
+                                    review_comment = review.find_element(
+                                        By.CSS_SELECTOR, "p.pt-2"
+                                    ).text.strip()
+                                except:
+                                    pass
+    
+                            review_id = f"{reviewer_name}_{review_date}_{review_comment[:20]}"
+                            if review_id not in loaded_review_ids:
+                                loaded_review_ids.add(review_id)
+                                new_reviews_found += 1
+                                actual_reviews.append({
+                                    "reviewer_name": reviewer_name,
+                                    "review_date": review_date,
+                                    "review_rating": review_rating,
+                                    "review_comment": review_comment
+                                })
+                        except Exception as e:
+                            print(f"Error processing a review: {e}")
+                            continue
+    
+                    print(f"Current review count: {len(actual_reviews)}/{MAX_REVIEWS}")
+    
+                    # Stop if we've hit our target
+                    if len(actual_reviews) >= MAX_REVIEWS:
+                        print(f"Reached target of {MAX_REVIEWS} reviews")
+                        continue_clicking = False
+                        break
+    
+                    # Try to find the Read More button
+                    print(f"\nAttempting to click Read More - {clicks_completed + 1}")
+    
+                    # Extended selectors for robustness
+                    button_selectors = [
+                        (By.CSS_SELECTOR, "button[data-testid='read-more-button']"),
+                        (By.XPATH, "//button[contains(text(), 'Read More')]"),
+                        (By.XPATH, "//span[contains(text(), 'Read More')]/parent::button"),
+                        (By.CSS_SELECTOR, ".text-amber.read-more-button"),
+                        (By.XPATH, "//button[contains(@class, 'read-more') and not(contains(@class, 'disabled'))]"),
+                        (By.CSS_SELECTOR, "button.btn.text-amber"),
+                        (By.XPATH, "//button[contains(@class, 'btn') and contains(., 'Read More')]"),
+                        (By.CSS_SELECTOR, "button[data-testid*='read-more']"),
+                        (By.XPATH, "//button[normalize-space(text())='Read More']"),
+                    ]
+    
+                    button = None
+                    for by, selector in button_selectors:
+                        try:
+                            elements = driver.find_elements(by, selector)
+                            for element in elements:
+                                if element.is_displayed() and element.is_enabled():
+                                    button = element
+                                    print(f"Found Read More button with selector: {selector}")
+                                    break
+                            if button:
+                                break
+                        except:
+                            continue
+    
+                    if not button:
+                        print("No more Read More buttons found, checking page source for debugging...")
+                        # Save page source for debugging
+                        with open(f"debug_page_source_{clicks_completed}.html", "w", encoding="utf-8") as f:
+                            f.write(driver.page_source)
+                        continue_clicking = False
+                        break
+    
+                    # Scroll the button into view
+                    driver.execute_script("arguments[0].scrollIntoView({behavior: 'smooth', block: 'center'});", button)
+                    time.sleep(1)
+    
+                    # Try to click using multiple methods
+                    click_successful = False
+                    try:
+                        driver.execute_script("arguments[0].click();", button)
+                        click_successful = True
+                    except:
+                        try:
+                            button.click()
+                            click_successful = True
+                        except:
+                            try:
+                                from selenium.webdriver.common.action_chains import ActionChains
+                                ActionChains(driver).move_to_element(button).click().perform()
+                                click_successful = True
+                            except:
+                                print("Failed to click button using all methods")
+    
+                    if click_successful:
+                        clicks_completed += 1
+                        print(f"Successfully clicked Read More ({clicks_completed})")
+    
+                        # Wait for new reviews to load
+                        try:
+                            wait.until(EC.presence_of_element_located(
+                                (By.CSS_SELECTOR, "[data-testid='reviews-item-component'], .review-item")
+                            ))
+                            print("New review elements detected")
+                        except:
+                            print("No new review elements detected, continuing...")
+    
+                        # Scroll to the bottom to ensure all content is loaded
+                        driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+                        time.sleep(3)  # Increased wait time for content to load
+                    else:
+                        print("Could not click the button, ending extraction")
+                        continue_clicking = False
+    
+                except Exception as e:
+                    print(f"Error during click attempt {clicks_completed + 1}: {e}")
+                    clicks_completed += 1
+                    if clicks_completed >= 10 and len(actual_reviews) == 0:
+                        continue_clicking = False
+                        break
+                    time.sleep(1)
+    
+            print(f"\nCompleted {clicks_completed} Read More clicks")
+            print(f"Successfully extracted {len(actual_reviews)} individual reviews")
+    
+            # Clean and format the data
+            ratings_count = ''.join(filter(str.isdigit, ratings_number)) if ratings_number else "0"
+            reviews_count = ''.join(filter(str.isdigit, reviews_number)) if reviews_number else "0"
+    
+            result = {
+                "Rating_value": rating_value,
+                "Ratings_count": ratings_count,
+                "Reviews_count": reviews_count,
+                "General_review": review_paragraphs,
+                "Specific_reviews": specific_reviews,
+                "Customer_reviews": actual_reviews
+            }
+    
+            return result
+    
+        except Exception as e:
+            print(f"Critical error in get_reviews_data: {e}")
+            import traceback
+            traceback.print_exc()
+            return {
+                "Rating_value": "N/A",
+                "Error": str(e)
+            }
+    
+        finally:
+            if driver:
+                try:
+                    driver.quit()
+                except Exception as e:
+                    print(f"Error closing driver: {e}")
+    
+    def expand_menu_categories(self, driver):
+        try:
+            print("Expanding menu categories...")
+            script = """
+                const expandButtons = document.evaluate(
+                    "//svg[contains(@class, 'fa-chevron-down')]",
+                    document,
+                    null,
+                    XPathResult.ORDERED_NODE_SNAPSHOT_TYPE,
+                    null
+                );
+    
+                const clickedCount = [];
+                for (let i = 0; i < expandButtons.snapshotLength; i++) {
+                    const button = expandButtons.snapshotItem(i);
+                    if (button && button.getAttribute('data-icon') === 'chevron-down') {
+                        button.closest('div').click();
+                        clickedCount.push(i);
+                    }
+                }
+                return clickedCount.length;
+            """
+            clicked_count = driver.execute_script(script)
+            print(f"Expanded {clicked_count} menu categories")
+            time.sleep(2)
+            return True
+        except Exception as e:
+            print(f"Error expanding menu categories: {e}")
+            return False
 
     ### GETTING PRICE NORMALLY ###
     async def get_price_info_with_retry(self, item, max_retries=3):
