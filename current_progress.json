@@ -3,12 +3,12 @@
     "الظهر"
   ],
   "current_area_index": 1,
-  "last_updated": "2025-05-15T17:19:30.313239",
+  "last_updated": "2025-05-15T18:28:26.776564",
   "current_progress": {
     "area_name": "الرقه",
-    "current_page": 26,
+    "current_page": 28,
     "total_pages": 145,
-    "current_restaurant": 13,
+    "current_restaurant": 12,
     "total_restaurants": 15,
     "processed_restaurants": [
       "Burger Gate",
@@ -305,7 +305,24 @@
       "Starbucks, Riqqa Park",
       "Laban X Laban",
       "Charlie`s",
-      "Chowking"
+      "Chowking",
+      "Eat Smart",
+      "koshari time",
+      "Jollibee",
+      "Mughal Mahal",
+      "Approved",
+      "Biryani Express",
+      "Ghraeyf",
+      "Lucky Bun, Mahboula tgo",
+      "Magan (DH kitchen), Mahboula",
+      "Duo burger",
+      "Kabab Al Tabab Restaurant",
+      "Juice Rotana Refreshment",
+      "Shawarma Factory",
+      "Sabaidee",
+      "The Noodle Station",
+      "Gang Nam",
+      "Yas Palace"
     ],
     "completed_pages": [
       1,
@@ -332,7 +349,9 @@
       22,
       23,
       24,
-      25
+      25,
+      26,
+      27
     ]
   }
 }
